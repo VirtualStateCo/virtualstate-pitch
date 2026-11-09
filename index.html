@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VirtualState · Confidential Distributed Compute</title>
+<style>
+  :root, body[data-tema="oscuro"] {
+    --bg: #0b0f1a; --bg2: #151d33; --text: #e8ecf4; --muted: #94a0b8;
+    --card: #131a2c; --stroke: #2c3858; --accent: #8b6cff; --accent2: #22d3ee;
+    --danger: #fb7185; --ok: #34d399; --net: #2a3552;
+    --glow: drop-shadow(0 0 14px rgba(139,108,255,.45));
+  }
+  body[data-tema="claro"] {
+    --bg: #f6f7fb; --bg2: #e8ecf6; --text: #0f172a; --muted: #475569;
+    --card: #ffffff; --stroke: #b8c2d6; --accent: #5233c9; --accent2: #0e7490;
+    --danger: #be123c; --ok: #047857; --net: #cdd5e4;
+    --glow: drop-shadow(0 2px 6px rgba(15,23,42,.12));
+  }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    background: radial-gradient(ellipse at 50% 35%, var(--bg2), var(--bg) 70%);
+    font-family: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    transition: background .4s;
+  }
+  svg#stage { width: 100vw; height: 100vh; display: block; cursor: default; }
+
+  /* Colores del tema */
+  .t  { fill: var(--text); }
+  .m  { fill: var(--muted); }
+  .a  { fill: var(--accent); }
+  .a2 { fill: var(--accent2); }
+  .card { fill: var(--card); stroke: var(--stroke); stroke-width: 2; filter: var(--glow); }
+  .vm   { fill: none; stroke: var(--accent); stroke-width: 3; stroke-dasharray: 10 7; }
+  .ln   { stroke: var(--stroke); stroke-width: 2; fill: none; }
+  .net  { stroke: var(--net); stroke-width: 2; fill: none; }
+  .netn { fill: var(--net); }
+  .enc  { stroke: var(--accent2); stroke-width: 4; fill: none; stroke-dasharray: 14 10; }
+  .flow { stroke-width: 4; fill: none; stroke-dasharray: 14 10; }
+  .flow.c { stroke: var(--accent2); }
+  .flow.p { stroke: var(--accent); }
+  .danger { fill: var(--danger); }
+  .dangerS { stroke: var(--danger); stroke-width: 10; stroke-linecap: round; }
+  .ok { fill: var(--ok); }
+  .gstop1 { stop-color: var(--accent); }
+  .gstop2 { stop-color: var(--accent2); }
+  text { font-family: inherit; }
+
+  /* Línea de tiempo */
+  .scene { opacity: 0; transition: opacity .9s ease; }
+  .scene.on { opacity: 1; }
+  .scene.on.out { opacity: 0; }
+  .fx  { opacity: 0; transform: translateY(18px); transition: opacity .8s ease, transform .8s ease; }
+  .fxf { opacity: 0; transition: opacity .8s ease; }
+  .fx.on, .fxf.on { opacity: 1; transform: none; }
+  .fx.on.off, .fxf.on.off { opacity: 0; }
+  #agent { transition: opacity .8s ease, transform 2.6s cubic-bezier(.65,0,.35,1); }
+  #agent.moved { transform: translate(870px, 120px); }
+  #nodeA .card { transition: stroke .5s, opacity .5s; }
+  #nodeA.fail .card { stroke: var(--danger); stroke-width: 4; }
+  #nodeA.fail .body { opacity: .35; transition: opacity .6s; }
+  .running .enc, .running .flow { animation: dash 1.2s linear infinite; }
+  @keyframes dash { to { stroke-dashoffset: -48; } }
+  #progress { transform-origin: 0 0; transform: scaleX(0); }
+  #progress.run { transform: scaleX(1); transition: transform 55s linear; }
+  .noanim, .noanim * { transition: none !important; animation: none !important; }
+
+  /* Controles */
+  #ctrl { position: fixed; top: 14px; right: 14px; display: flex; gap: 8px; opacity: .35; transition: opacity .3s; z-index: 2; }
+  #ctrl:hover { opacity: 1; }
+  #ctrl button {
+    font: 600 13px/1 inherit; font-family: inherit; padding: 8px 12px; border-radius: 8px; cursor: pointer;
+    background: var(--card); color: var(--text); border: 1px solid var(--stroke);
+  }
+</style>
+</head>
+<body data-tema="oscuro">
+<div id="ctrl">
+  <button id="bTema" title="Cambiar tema (T)">◐ Tema</button>
+  <button id="bReset" title="Reiniciar (R)">↻ Reiniciar</button>
+</div>
+
+<svg id="stage" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" class="gstop1"/><stop offset="1" class="gstop2"/>
+    </linearGradient>
+    <marker id="arrC" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" class="a2"/>
+    </marker>
+    <marker id="arrP" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" class="a"/>
+    </marker>
+    <!-- Logo: hexágono con candado -->
+    <g id="logo">
+      <path d="M0,-70 L60.6,-35 L60.6,35 L0,70 L-60.6,35 L-60.6,-35 Z" fill="none" stroke="url(#grad)" stroke-width="6"/>
+      <rect x="-22" y="-6" width="44" height="34" rx="6" fill="url(#grad)"/>
+      <path d="M-13,-6 v-12 a13,13 0 0 1 26,0 v12" fill="none" stroke="url(#grad)" stroke-width="6"/>
+    </g>
+    <g id="lock">
+      <rect x="-11" y="-2" width="22" height="17" rx="3" class="a"/>
+      <path d="M-6.5,-2 v-6 a6.5,6.5 0 0 1 13,0 v6" fill="none" stroke="var(--accent)" stroke-width="3"/>
+    </g>
+  </defs>
+
+  <!-- ========== ESCENA 1 · TÍTULO ========== -->
+  <g class="scene" data-in="0" data-out="16.5">
+    <use href="#logo" x="800" y="300" class="fx" data-in="0.3"/>
+    <text x="800" y="500" text-anchor="middle" font-size="120" font-weight="800" class="fx" data-in="1.2" letter-spacing="-2">
+      <tspan class="t">Virtual</tspan><tspan fill="url(#grad)">State</tspan>
+    </text>
+    <text x="800" y="580" text-anchor="middle" font-size="34" font-weight="600" letter-spacing="7" class="a2 fx" data-in="2.6">CONFIDENTIAL · DISTRIBUTED · COMPUTE</text>
+    <text x="800" y="690" text-anchor="middle" font-size="32" class="m fx" data-in="4.8">Computación privada y distribuida para agentes de IA</text>
+    <text x="800" y="740" text-anchor="middle" font-size="32" class="m fx" data-in="6.5">sobre el hardware que ya existe y está parado.</text>
+  </g>
+
+  <!-- ========== ESCENA 2 · LA RED ========== -->
+  <g class="scene" data-in="17.5" data-out="36.5">
+    <text x="800" y="95" text-anchor="middle" font-size="46" font-weight="800" class="t fx" data-in="17.6">La red</text>
+    <text x="800" y="140" text-anchor="middle" font-size="26" class="m fx" data-in="18.2">Nodos heterogéneos · software open source · el host ejecuta, pero no ve</text>
+
+    <!-- Red de fondo -->
+    <g class="fxf" data-in="18.5">
+      <path class="net" d="M80,250 L170,180 L310,215 M680,220 L760,300 L700,420 M720,700 L820,640 L950,720 M80,760 L150,680 M1500,800 L1540,700 M1530,380 L1560,250 L1490,180"/>
+      <circle class="netn" cx="80" cy="250" r="9"/><circle class="netn" cx="170" cy="180" r="7"/><circle class="netn" cx="310" cy="215" r="9"/>
+      <circle class="netn" cx="680" cy="220" r="7"/><circle class="netn" cx="760" cy="300" r="10"/><circle class="netn" cx="700" cy="420" r="7"/>
+      <circle class="netn" cx="720" cy="700" r="8"/><circle class="netn" cx="820" cy="640" r="10"/><circle class="netn" cx="950" cy="720" r="7"/>
+      <circle class="netn" cx="80" cy="760" r="8"/><circle class="netn" cx="150" cy="680" r="7"/><circle class="netn" cx="1500" cy="800" r="7"/>
+      <circle class="netn" cx="1540" cy="700" r="9"/><circle class="netn" cx="1530" cy="380" r="8"/><circle class="netn" cx="1560" cy="250" r="7"/><circle class="netn" cx="1490" cy="180" r="9"/>
+    </g>
+
+    <!-- Modelo de IA externo -->
+    <g class="fx" data-in="23">
+      <rect class="card" x="1120" y="180" width="360" height="130" rx="18"/>
+      <text x="1300" y="235" text-anchor="middle" font-size="30" font-weight="700" class="t">Modelo de IA</text>
+      <text x="1300" y="275" text-anchor="middle" font-size="22" class="m">Claude · GPT · Llama · Mistral…</text>
+    </g>
+
+    <!-- Nodo A -->
+    <g id="nodeA" class="fx" data-in="19">
+      <rect class="card" x="170" y="300" width="440" height="330" rx="20"/>
+      <text x="390" y="345" text-anchor="middle" font-size="26" font-weight="700" class="t">Nodo A · PC doméstico</text>
+      <g class="body">
+        <text x="390" y="605" text-anchor="middle" font-size="21" class="m">El dueño del equipo no ve el interior</text>
+      </g>
+    </g>
+    <g class="fxf" data-in="20.5" id="vmA">
+      <rect class="vm" x="210" y="370" width="360" height="200" rx="14"/>
+      <use href="#lock" x="545" y="395"/>
+      <text x="230" y="400" font-size="20" font-weight="700" class="a">VM CONFIDENCIAL</text>
+    </g>
+
+    <!-- Nodo B -->
+    <g class="fx" data-in="25.5">
+      <rect class="card" x="1040" y="430" width="440" height="330" rx="20"/>
+      <text x="1260" y="475" text-anchor="middle" font-size="26" font-weight="700" class="t">Nodo B · servidor de pyme</text>
+      <text x="1260" y="735" text-anchor="middle" font-size="21" class="m">Mismo software, otro hardware</text>
+    </g>
+    <g class="fxf" data-in="29.5">
+      <rect class="vm" x="1080" y="500" width="360" height="200" rx="14"/>
+      <use href="#lock" x="1415" y="525"/>
+      <text x="1100" y="530" font-size="20" font-weight="700" class="a">VM CONFIDENCIAL</text>
+    </g>
+
+    <!-- Conexión cifrada A → modelo -->
+    <g class="fxf" data-in="24" data-off="29" id="link1">
+      <path class="enc" d="M570,420 C800,330 920,250 1120,245" marker-end="url(#arrC)"/>
+      <text x="815" y="282" text-anchor="middle" font-size="24" font-weight="700" class="a2" transform="rotate(-20 815 282)">cifrado punto a punto</text>
+    </g>
+
+    <!-- Agente (se mueve de A a B) -->
+    <g id="agent" class="fxf" data-in="21.5">
+      <rect x="235" y="415" width="310" height="135" rx="14" fill="url(#grad)"/>
+      <text x="390" y="465" text-anchor="middle" font-size="28" font-weight="800" fill="#ffffff">Agente IA</text>
+      <text x="390" y="500" text-anchor="middle" font-size="19" fill="#ffffff">contexto · claves API</text>
+      <text x="390" y="527" text-anchor="middle" font-size="19" fill="#ffffff">wallet · estado</text>
+    </g>
+
+    <!-- Fallo del nodo A -->
+    <g class="fxf" data-in="28.5" id="failMark">
+      <line class="dangerS" x1="345" y1="425" x2="435" y2="515"/>
+      <line class="dangerS" x1="435" y1="425" x2="345" y2="515"/>
+      <text x="390" y="680" text-anchor="middle" font-size="26" font-weight="700" class="danger">Fallo del servidor</text>
+    </g>
+
+    <!-- Conexión cifrada B → modelo -->
+    <g class="fxf" data-in="32.6">
+      <path class="enc" d="M1300,428 L1300,318" marker-end="url(#arrC)"/>
+      <text x="1318" y="382" font-size="22" font-weight="700" class="a2">cifrado</text>
+    </g>
+
+    <!-- Pies de escena -->
+    <text x="800" y="845" text-anchor="middle" font-size="30" font-weight="600" class="t fx" data-in="21.8" data-off="28.4">Memoria en uso ofuscada: espiar al cliente deja de ser práctico.</text>
+    <text x="800" y="845" text-anchor="middle" font-size="30" font-weight="600" class="t fx" data-in="30">Seguro de vida para agentes: migran con todo su estado intacto.</text>
+  </g>
+
+  <!-- ========== ESCENA 3 · MARKETPLACE ========== -->
+  <g class="scene" data-in="37.5" data-out="99999">
+    <text x="800" y="95" text-anchor="middle" font-size="46" font-weight="800" class="t fx" data-in="37.6">El marketplace</text>
+    <text x="800" y="140" text-anchor="middle" font-size="26" class="m fx" data-in="38.2">Contratación automática en blockchain · nosotros cobramos comisión</text>
+
+    <g class="fx" data-in="39">
+      <rect class="card" x="90" y="260" width="400" height="330" rx="20"/>
+      <text x="290" y="315" text-anchor="middle" font-size="32" font-weight="800" class="t">Proveedores</text>
+      <text x="290" y="375" text-anchor="middle" font-size="24" class="m">PCs domésticos</text>
+      <text x="290" y="415" text-anchor="middle" font-size="24" class="m">Servidores de pymes</text>
+      <text x="290" y="455" text-anchor="middle" font-size="24" class="m">Hardware propio</text>
+      <text x="290" y="540" text-anchor="middle" font-size="24" font-weight="700" class="ok">Monetizan su equipo parado</text>
+    </g>
+
+    <g class="fx" data-in="40.5">
+      <rect x="610" y="240" width="380" height="370" rx="24" fill="url(#grad)" style="filter:var(--glow)"/>
+      <text x="800" y="320" text-anchor="middle" font-size="24" font-weight="700" fill="#ffffff" letter-spacing="3">MARKETPLACE</text>
+      <text x="800" y="380" text-anchor="middle" font-size="44" font-weight="800" fill="#ffffff">VirtualState</text>
+      <text x="800" y="460" text-anchor="middle" font-size="24" fill="#ffffff">Comisión por transacción</text>
+      <text x="800" y="500" text-anchor="middle" font-size="24" fill="#ffffff">Smart contracts</text>
+      <text x="800" y="540" text-anchor="middle" font-size="24" fill="#ffffff">Escala sin límite de hardware</text>
+    </g>
+
+    <g class="fx" data-in="42">
+      <rect class="card" x="1110" y="260" width="400" height="330" rx="20"/>
+      <text x="1310" y="315" text-anchor="middle" font-size="32" font-weight="800" class="t">Clientes</text>
+      <text x="1310" y="375" text-anchor="middle" font-size="24" class="m">Agentes de IA autónomos</text>
+      <text x="1310" y="415" text-anchor="middle" font-size="24" class="m">Desarrolladores</text>
+      <text x="1310" y="455" text-anchor="middle" font-size="24" class="m">Empresas</text>
+      <text x="1310" y="540" text-anchor="middle" font-size="24" font-weight="700" class="a2">Contratan recursos solos</text>
+    </g>
+
+    <!-- Flujos -->
+    <g class="fxf" data-in="43.5">
+      <path class="flow c" d="M495,360 L600,360" marker-end="url(#arrC)"/>
+      <path class="flow c" d="M995,360 L1100,360" marker-end="url(#arrC)"/>
+      <text x="1048" y="340" text-anchor="middle" font-size="20" font-weight="700" class="a2">cómputo</text>
+      <text x="548" y="340" text-anchor="middle" font-size="20" font-weight="700" class="a2">cómputo</text>
+    </g>
+    <g class="fxf" data-in="45">
+      <path class="flow p" d="M1100,500 L995,500" marker-end="url(#arrP)"/>
+      <path class="flow p" d="M600,500 L495,500" marker-end="url(#arrP)"/>
+      <text x="1048" y="535" text-anchor="middle" font-size="20" font-weight="700" class="a">pago</text>
+      <text x="548" y="535" text-anchor="middle" font-size="20" font-weight="700" class="a">pago</text>
+    </g>
+
+    <!-- Cierre -->
+    <text x="800" y="730" text-anchor="middle" font-size="50" font-weight="800" fill="url(#grad)" class="fx" data-in="48.5">La infraestructura privada</text>
+    <text x="800" y="795" text-anchor="middle" font-size="50" font-weight="800" fill="url(#grad)" class="fx" data-in="49.3">de la economía de los agentes.</text>
+    <text x="800" y="860" text-anchor="middle" font-size="22" letter-spacing="5" class="m fx" data-in="51">VIRTUALSTATE · CONFIDENTIAL DISTRIBUTED COMPUTE</text>
+  </g>
+
+  <!-- Barra de progreso -->
+  <rect id="progress" x="0" y="894" width="1600" height="6" fill="url(#grad)" opacity=".7"/>
+</svg>
+
+<script>
+(function () {
+  var DUR = 55;
+  var svg = document.getElementById('stage');
+  var timers = [];
+  var finished = false;
+
+  function at(sec, fn) { timers.push(setTimeout(fn, sec * 1000)); }
+
+  function reset() {
+    timers.forEach(clearTimeout); timers = []; finished = false;
+    document.body.classList.add('noanim');
+    svg.querySelectorAll('.on, .out, .off, .moved, .fail, .run').forEach(function (el) {
+      el.classList.remove('on', 'out', 'off', 'moved', 'fail', 'run');
+    });
+    svg.classList.remove('running');
+    void svg.getBoundingClientRect();
+    document.body.classList.remove('noanim');
+  }
+
+  function play() {
+    reset();
+    svg.classList.add('running');
+    requestAnimationFrame(function () {
+      document.getElementById('progress').classList.add('run');
+    });
+    svg.querySelectorAll('[data-in]').forEach(function (el) {
+      at(+el.dataset.in, function () { el.classList.add('on'); });
+      if (el.dataset.out && +el.dataset.out < 9999) at(+el.dataset.out, function () { el.classList.add('out'); });
+      if (el.dataset.off) at(+el.dataset.off, function () { el.classList.add('off'); });
+    });
+    // Momentos especiales de la escena 2
+    at(28.5, function () { document.getElementById('nodeA').classList.add('fail'); });
+    at(30, function () { document.getElementById('agent').classList.add('moved'); });
+    at(DUR, function () { finished = true; svg.style.cursor = 'pointer'; });
+  }
+
+  // Tema
+  function setTema(t) {
+    document.body.dataset.tema = t;
+    try { localStorage.setItem('vs-tema', t); } catch (e) {}
+  }
+  function toggleTema() { setTema(document.body.dataset.tema === 'oscuro' ? 'claro' : 'oscuro'); }
+
+  var q = new URLSearchParams(location.search).get('tema');
+  var saved = null;
+  try { saved = localStorage.getItem('vs-tema'); } catch (e) {}
+  setTema(q === 'claro' || q === 'oscuro' ? q : (saved || 'oscuro'));
+
+  document.getElementById('bTema').onclick = toggleTema;
+  document.getElementById('bReset').onclick = play;
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 't' || e.key === 'T') toggleTema();
+    if (e.key === 'r' || e.key === 'R') play();
+  });
+  svg.addEventListener('click', function () { if (finished) { svg.style.cursor = 'default'; play(); } });
+
+  play();
+})();
+</script>
+</body>
+</html>
