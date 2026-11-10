@@ -56,6 +56,13 @@
   .fx.on.off, .fxf.on.off { opacity: 0; }
   #agent { transition: opacity .8s ease, transform 2.6s cubic-bezier(.65,0,.35,1); }
   #agent.moved { transform: translate(870px, 120px); }
+  #agent-mascot { transition: opacity .5s ease; }
+  #agent.migrating #agent-mascot { opacity: .35; }
+  #agent .eyes-closed { display: none; }
+  #agent.sleeping .eyes-open { display: none; }
+  #agent.sleeping .eyes-closed { display: inline; }
+  #qrScreen { display: none; }
+  #qrScreen.on { display: inline; }
   #nodeA .card { transition: stroke .5s, opacity .5s; }
   #nodeA.fail .card { stroke: var(--danger); stroke-width: 4; }
   #nodeA.fail .body { opacity: .35; transition: opacity .6s; }
@@ -170,6 +177,13 @@
 
     <!-- Agente (se mueve de A a B) -->
     <g id="agent" class="fxf" data-in="21.5">
+      <g id="agent-mascot" transform="translate(468 375) scale(.4)" role="img" aria-label="Agente de IA">
+        <path d="M20,0 H140 V40 H160 V60 H140 V80 H130 V100 H120 V80 H110 V100 H100 V80 H60 V100 H50 V80 H40 V100 H30 V80 H20 V60 H0 V40 H20 Z" fill="#da7756" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"/>
+        <g class="eyes-open" fill="#ffffff">
+          <path d="M40,20 h10 v20 H40 Z M110,20 h10 v20 h-10 Z"/>
+        </g>
+        <path class="eyes-closed" d="M40,22 l12,8 -12,8 M120,22 l-12,8 12,8" fill="none" stroke="#171717" stroke-width="5"/>
+      </g>
       <rect x="235" y="415" width="310" height="135" rx="14" fill="url(#grad)"/>
       <text x="390" y="465" text-anchor="middle" font-size="28" font-weight="800" fill="#ffffff">Agente IA</text>
       <text x="390" y="500" text-anchor="middle" font-size="19" fill="#ffffff">contexto · claves API</text>
@@ -248,6 +262,18 @@
 
   <!-- Barra de progreso -->
   <rect id="progress" x="0" y="894" width="1600" height="6" fill="url(#grad)" opacity=".7"/>
+  <!-- QR persistente: primer clic al terminar; siguiente clic reinicia. -->
+  <g id="qrScreen">
+    <rect width="1600" height="900" fill="var(--bg)"/>
+    <text x="800" y="115" text-anchor="middle" font-size="50" font-weight="800" fill="url(#grad)">VirtualState</text>
+    <svg id="landingQR" x="530" y="170" width="540" height="540" viewBox="0 0 33 33" role="img" aria-labelledby="qrTitle" shape-rendering="crispEdges">
+      <title id="qrTitle">Escanea el QR para abrir https://virtualstate.co</title>
+      <rect width="33" height="33" fill="#ffffff"/>
+      <path fill="#000000" d="M4,4h7v1h-7zM13,4h1v1h-1zM15,4h1v1h-1zM17,4h2v1h-2zM22,4h7v1h-7zM4,5h1v1h-1zM10,5h1v1h-1zM12,5h1v1h-1zM14,5h3v1h-3zM22,5h1v1h-1zM28,5h1v1h-1zM4,6h1v1h-1zM6,6h3v1h-3zM10,6h1v1h-1zM12,6h1v1h-1zM18,6h3v1h-3zM22,6h1v1h-1zM24,6h3v1h-3zM28,6h1v1h-1zM4,7h1v1h-1zM6,7h3v1h-3zM10,7h1v1h-1zM12,7h6v1h-6zM22,7h1v1h-1zM24,7h3v1h-3zM28,7h1v1h-1zM4,8h1v1h-1zM6,8h3v1h-3zM10,8h1v1h-1zM13,8h1v1h-1zM15,8h2v1h-2zM18,8h1v1h-1zM20,8h1v1h-1zM22,8h1v1h-1zM24,8h3v1h-3zM28,8h1v1h-1zM4,9h1v1h-1zM10,9h1v1h-1zM14,9h1v1h-1zM18,9h1v1h-1zM20,9h1v1h-1zM22,9h1v1h-1zM28,9h1v1h-1zM4,10h7v1h-7zM12,10h1v1h-1zM14,10h1v1h-1zM16,10h1v1h-1zM18,10h1v1h-1zM20,10h1v1h-1zM22,10h7v1h-7zM12,11h5v1h-5zM19,11h1v1h-1zM4,12h1v1h-1zM10,12h1v1h-1zM12,12h1v1h-1zM16,12h7v1h-7zM25,12h3v1h-3zM5,13h1v1h-1zM8,13h1v1h-1zM12,13h1v1h-1zM18,13h2v1h-2zM23,13h5v1h-5zM6,14h1v1h-1zM8,14h1v1h-1zM10,14h2v1h-2zM13,14h3v1h-3zM18,14h2v1h-2zM24,14h2v1h-2zM27,14h2v1h-2zM4,15h2v1h-2zM8,15h2v1h-2zM13,15h2v1h-2zM16,15h1v1h-1zM18,15h1v1h-1zM20,15h4v1h-4zM25,15h1v1h-1zM28,15h1v1h-1zM5,16h1v1h-1zM7,16h5v1h-5zM14,16h3v1h-3zM18,16h1v1h-1zM20,16h1v1h-1zM22,16h1v1h-1zM28,16h1v1h-1zM4,17h6v1h-6zM11,17h1v1h-1zM14,17h1v1h-1zM17,17h1v1h-1zM19,17h3v1h-3zM23,17h1v1h-1zM27,17h1v1h-1zM4,18h1v1h-1zM10,18h1v1h-1zM12,18h1v1h-1zM15,18h6v1h-6zM22,18h4v1h-4zM27,18h2v1h-2zM4,19h1v1h-1zM6,19h4v1h-4zM11,19h5v1h-5zM18,19h1v1h-1zM20,19h1v1h-1zM23,19h1v1h-1zM25,19h2v1h-2zM28,19h1v1h-1zM4,20h1v1h-1zM6,20h1v1h-1zM10,20h3v1h-3zM14,20h2v1h-2zM17,20h8v1h-8zM26,20h1v1h-1zM12,21h3v1h-3zM16,21h1v1h-1zM20,21h1v1h-1zM24,21h1v1h-1zM4,22h7v1h-7zM15,22h1v1h-1zM18,22h1v1h-1zM20,22h1v1h-1zM22,22h1v1h-1zM24,22h1v1h-1zM28,22h1v1h-1zM4,23h1v1h-1zM10,23h1v1h-1zM13,23h2v1h-2zM16,23h1v1h-1zM18,23h3v1h-3zM24,23h1v1h-1zM27,23h1v1h-1zM4,24h1v1h-1zM6,24h3v1h-3zM10,24h1v1h-1zM13,24h1v1h-1zM16,24h9v1h-9zM26,24h3v1h-3zM4,25h1v1h-1zM6,25h3v1h-3zM10,25h1v1h-1zM13,25h2v1h-2zM17,25h6v1h-6zM27,25h2v1h-2zM4,26h1v1h-1zM6,26h3v1h-3zM10,26h1v1h-1zM14,26h5v1h-5zM21,26h1v1h-1zM25,26h2v1h-2zM28,26h1v1h-1zM4,27h1v1h-1zM10,27h1v1h-1zM15,27h1v1h-1zM18,27h7v1h-7zM28,27h1v1h-1zM4,28h7v1h-7zM12,28h2v1h-2zM16,28h3v1h-3zM20,28h3v1h-3zM25,28h1v1h-1zM28,28h1v1h-1z"/>
+    </svg>
+    <text x="800" y="775" text-anchor="middle" font-size="40" font-weight="700" class="t">virtualstate.co</text>
+    <text x="800" y="830" text-anchor="middle" font-size="22" class="m">Escanea para saber más · Haz clic para volver a empezar</text>
+  </g>
 </svg>
 
 <script>
@@ -256,14 +282,19 @@
   var svg = document.getElementById('stage');
   var timers = [];
   var finished = false;
+  var qrVisible = false;
+  var agent = document.getElementById('agent');
+  var qrScreen = document.getElementById('qrScreen');
 
   function at(sec, fn) { timers.push(setTimeout(fn, sec * 1000)); }
 
   function reset() {
     timers.forEach(clearTimeout); timers = []; finished = false;
+    qrVisible = false;
+    svg.style.cursor = 'default';
     document.body.classList.add('noanim');
-    svg.querySelectorAll('.on, .out, .off, .moved, .fail, .run').forEach(function (el) {
-      el.classList.remove('on', 'out', 'off', 'moved', 'fail', 'run');
+    svg.querySelectorAll('.on, .out, .off, .moved, .fail, .run, .sleeping, .migrating').forEach(function (el) {
+      el.classList.remove('on', 'out', 'off', 'moved', 'fail', 'run', 'sleeping', 'migrating');
     });
     svg.classList.remove('running');
     void svg.getBoundingClientRect();
@@ -282,8 +313,12 @@
       if (el.dataset.off) at(+el.dataset.off, function () { el.classList.add('off'); });
     });
     // Momentos especiales de la escena 2
-    at(28.5, function () { document.getElementById('nodeA').classList.add('fail'); });
-    at(30, function () { document.getElementById('agent').classList.add('moved'); });
+    at(28.5, function () {
+      document.getElementById('nodeA').classList.add('fail');
+      agent.classList.add('sleeping');
+    });
+    at(30, function () { agent.classList.add('moved', 'migrating'); });
+    at(32.6, function () { agent.classList.remove('sleeping', 'migrating'); });
     at(DUR, function () { finished = true; svg.style.cursor = 'pointer'; });
   }
 
@@ -305,7 +340,12 @@
     if (e.key === 't' || e.key === 'T') toggleTema();
     if (e.key === 'r' || e.key === 'R') play();
   });
-  svg.addEventListener('click', function () { if (finished) { svg.style.cursor = 'default'; play(); } });
+  svg.addEventListener('click', function () {
+    if (!finished) return;
+    if (qrVisible) { play(); return; }
+    qrVisible = true;
+    qrScreen.classList.add('on');
+  });
 
   play();
 })();
